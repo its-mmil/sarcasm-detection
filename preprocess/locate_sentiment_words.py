@@ -27,7 +27,6 @@ def preprocess(text):
         query = word
         if expanded is not None or word == "not": # If word is not or contraction involving not
             query = " ".join(["not"] + words[i + 1: min(i + LOOK_DIST + 1, len(words))]) # Form a query of "not" and the LOOK_DIST words that follow
-        #analyzer = Sentiment()
         sentiment = analyzer.analyze([query]).get("sentiments") # Analyze query and retrieve sentiment result.
         if sentiment is None:
             print(words)
@@ -37,15 +36,6 @@ def preprocess(text):
                 sentiment_words.append("not")
             else:
                 sentiment_words.append(word)
-        
-        # if word == "amazing":
-        #     print(words)
-        #     print(query)
-        #     print(analyzer.analyze([query]))
-        #     analyzer = Sentiment()
-        #     print(analyzer.analyze([query]))
-        #     raise Exception
-
         output_text.append(word)
     
     return " ".join(output_text), " ".join(sentiment_words)
