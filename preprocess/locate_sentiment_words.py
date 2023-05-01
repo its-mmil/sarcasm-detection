@@ -1,6 +1,7 @@
 from sentiment import Sentiment
 import csv
 from string import ascii_letters, digits
+import random
 
 # Preprocesses input by removing punctuation and splitting contractions (can't/cant -> can not). 
 # Most importantly, applies the sentiment analyzer to pick out and record words that convey sentiment and determines the data's literal sentiment and implied sentiment.
@@ -67,7 +68,8 @@ def preprocess_csv(path, start_row=0):
                 text = row[0]
                 sarcasm_label = row[1]
                 new_text, sentiment_words, non_sentiment_words, positivity = preprocess(text)
-                literal_label = int(positivity >= 0) # Literal label just reflects whether the text contains fewer negative words than positive
+                positivity = random.choice([-1, 1]) if positivity == 0 else positivity # Randomly select literal label if positivity cannot be determined
+                literal_label = int(positivity > 0) # Literal label just reflects whether the text contains more positive words than negative
                 if sarcasm_label == "1": # If text is sarcastic, implied label should be opposite of literal, otherwise equal
                     implied_label = int(positivity < 0)
                 else:
