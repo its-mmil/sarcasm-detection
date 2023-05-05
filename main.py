@@ -8,8 +8,8 @@ from model import Model
 
 def parseArguments(): # Taken from HW6
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--num_epochs", type=int, default=10)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--num_epochs", type=int, default=5)
     parser.add_argument("--learning_rate", type=float, default=0.003)
     parser.add_argument("--input_width", type=int, default=140)
     args = parser.parse_args()
@@ -53,7 +53,7 @@ def train(args, model, all_input, lit_input, imp_input, lit_labels, imp_labels, 
     sarc_labels = [row[5] for row in all_data]
 
     first_ind = 0 # 1st index of batch data
-    last_ind = batch_size # index after last index of batch data
+    last_ind = batch_size # Index after last index of batch data
     lit_accs, imp_accs, sarc_accs = [], [], []
     while first_ind < input_len:
         if last_ind > input_len: # If taking a full batch would index out of bounds, end at last index
@@ -68,7 +68,7 @@ def train(args, model, all_input, lit_input, imp_input, lit_labels, imp_labels, 
         
         with tf.GradientTape() as tape:
             lit_pred, imp_pred, sarc_pred = model.call((lit_input_b, imp_input_b, all_input_b))
-            loss = losses.total_loss(lit_labels_b, lit_pred, imp_labels_b, imp_pred, sarc_labels_b, sarc_pred, loss_coefs=[.25,.25,.5])
+            loss = losses.total_loss(lit_labels_b, lit_pred, imp_labels_b, imp_pred, sarc_labels_b, sarc_pred, loss_coefs=[1/3, 1/3, 1/3])
         gradients = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
@@ -91,7 +91,7 @@ def train(args, model, all_input, lit_input, imp_input, lit_labels, imp_labels, 
     print(f"Overall Sarcasm Accuracy: {avg_sarc_acc}")
 
 def test(model, all_input, lit_input, imp_input, lit_labels, imp_labels, sarc_labels):
-    lit_pred, imp_pred, sarc_pred = model.call((tf.convert_to_tensor(lit_input), tf.convert_to_tensor(imp_input), tf.convert_to_tensor(all_input)), training=False)
+    lit_pred, imp_pred, sarc_pred = model.call((tf.convert_to_tensor(lit_input), tf.convert_to_tensor(imp_input), tf.convert_to_tensor(all_input)))
     lit_acc = binary_accuracy(tf.convert_to_tensor(lit_labels), lit_pred)
     imp_acc = binary_accuracy(tf.convert_to_tensor(imp_labels), imp_pred)
     sarc_acc = binary_accuracy(tf.convert_to_tensor(sarc_labels), sarc_pred)
@@ -100,27 +100,22 @@ def test(model, all_input, lit_input, imp_input, lit_labels, imp_labels, sarc_la
     print(f"Implied Channel Accuracy: {imp_acc}")
     print(f"Overall Sarcasm Accuracy: {sarc_acc}")
 
-    
 # Taken from HW3
 def binary_accuracy(y_true, y_pred):
     correct_predictions = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_true, 1))
     return tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
-
-
-# def custom_loss(y_true, y_pred): # Custom intermediary loss function to satisfy keras's compile requirements
-#     lit_labels = y_true[0]
-#     imp_labels = y_true[1]
-#     sarc_labels = y_true[2]
-#     lit_pred = y_pred[0]
-#     imp_pred = y_pred[1]
-#     sarc_pred = y_pred[2]
-#     return losses.total_loss(lit_labels, lit_pred, imp_labels, imp_pred, sarc_labels, sarc_pred)
 
 def main(args):
     train_file = "data/train_preprocessed.csv"
     test_file = "data/test_preprocessed.csv"
     train_text, train_sarc_labels, train_sent_words, train_non_sent_words, train_lit_labels, train_imp_labels = get_data(train_file)
     test_text, test_sarc_labels, test_sent_words, test_non_sent_words, test_lit_labels, test_imp_labels = get_data(test_file)
+
+    # Use all text as literal channel input if no sentiment words exist
+    if train_sent_words == []:
+        train_sent_words = train_text
+    if test_sent_words == []:
+        test_sent_words = test_text
 
     # Build vocab:
     all_words = []
@@ -139,10 +134,6 @@ def main(args):
     train_lit_labels, train_imp_labels, train_sarc_labels, test_lit_labels, test_imp_labels, test_sarc_labels = one_hotted
 
     model = Model(vocab_size=len(vocabulary) + 1)
-    #model.compile(optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate), loss = custom_loss, metrics = tf.keras.metrics.BinaryAccuracy())
-    #model.fit(x=(train_sent_words, train_non_sent_words, train_text), y=(train_lit_labels, train_imp_labels, train_sarc_labels), epochs=args.num_epochs, batch_size=args.batch_size)
-    #model.fit(x=all_inputs, y=all_inputs, epochs=args.num_epochs, batch_size=args.batch_size)
-
     # Train model
     for epoch in range(1, args.num_epochs + 1):
         print(f"Epoch {epoch}:")
