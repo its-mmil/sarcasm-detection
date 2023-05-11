@@ -5,7 +5,7 @@ class Model(tf.keras.Model):
     def __init__(self, vocab_size):
         super().__init__()
 
-        embed_size = 64
+        embed_size = 128
         rnn_size = 64
         self.embedding1 = tf.keras.layers.Embedding(vocab_size, embed_size, mask_zero = True)
         self.embedding2 = tf.keras.layers.Embedding(vocab_size, embed_size, mask_zero = True)
